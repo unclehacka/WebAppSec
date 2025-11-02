@@ -1,5 +1,3 @@
-name: security-gates
-on: [pull_request]
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -29,11 +27,23 @@ jobs:
       - name: Grype
         run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin && grype sbom:sbom.json
 
+      - name: Start test app container
+        run: docker run -d --name zap-target -p 8080:80 bkimminich/juice-shop
+
+      - name: Wait for app to be ready
+        run: |
+          for i in $(seq 1 20); do
+            if curl -s http://localhost:8080 >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+
       - name: OWASP ZAP Baseline
         run: docker run --rm \
+          --network host \
           -v $(pwd):/zap/wrk:rw \
           ghcr.io/zaproxy/zaproxy \
-          zap-baseline.py -t http://example.com -r zap.html -m 10
+          zap-baseline.py -t http://localhost:8080 -r zap.html -m 10
 
       - name: Upload ZAP report
         uses: actions/upload-artifact@v4
@@ -47,3 +57,7 @@ jobs:
             echo "ZAP found issues"
             exit 1
           fi
+
+      - name: Cleanup test container
+        if: always()
+        run: docker rm -f zap-target || true
