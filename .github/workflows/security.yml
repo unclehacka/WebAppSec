@@ -45,17 +45,10 @@ jobs:
           mkdir -p ${{ github.workspace }}/zap-reports
           chmod -R a+rwX ${{ github.workspace }}/zap-reports
 
-      - name: Create empty files
-        run: |
-          touch ${{ github.workspace }}/zap-reports/zap.yaml
-          touch ${{ github.workspace }}/zap-reports/zap.html
-          chmod a+rw ${{ github.workspace }}/zap-reports/zap.yaml
-          chmod a+rw ${{ github.workspace }}/zap-reports/zap.html
-
       - name: Run ZAP Baseline
         run: |
           docker run --rm \
-          -v ${{ github.workspace }}:/zap/wrk:rw \
+          -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
           ghcr.io/zaproxy/zaproxy \
           zap-baseline.py -t http://localhost:8080 -r zap-reports/zap.html -c zap-reports/zap.yaml -m 10
 
