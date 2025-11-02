@@ -36,12 +36,21 @@ jobs:
         run: |
           for i in $(seq 1 20); do
             if curl -s http://localhost:8080 >/dev/null; then exit 0; fi
-          sleep 1
+            sleep 1
           done
           exit 1
 
-      - name: Set permissions
-        run: chmod a+rwX ${{ github.workspace }}/zap-reports
+      - name: Prepare zap-reports folder
+        run: |
+          mkdir -p ${{ github.workspace }}/zap-reports
+          chmod -R a+rwX ${{ github.workspace }}/zap-reports
+
+      - name: Create empty files
+        run: |
+          touch ${{ github.workspace }}/zap-reports/zap.yaml
+          touch ${{ github.workspace }}/zap-reports/zap.html
+          chmod a+rw ${{ github.workspace }}/zap-reports/zap.yaml
+          chmod a+rw ${{ github.workspace }}/zap-reports/zap.html
 
       - name: Run ZAP Baseline
         run: |
