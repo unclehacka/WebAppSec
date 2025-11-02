@@ -41,7 +41,7 @@ jobs:
           exit 1
 
       - name: Set permissions
-        run: chmod -R a+rwX ${{ github.workspace }}
+        run: chmod a+rwX ${{ github.workspace }}/zap-reports
 
       - name: Run ZAP Baseline
         run: |
@@ -49,17 +49,17 @@ jobs:
           -v ${{ github.workspace }}:/zap/wrk:rw \
           --user $(id -u):$(id -g) \
           ghcr.io/zaproxy/zaproxy \
-          zap-baseline.py -t http://localhost:8080 -r zap.html -m 10
+          zap-baseline.py -t http://localhost:8080 -r zap-reports/zap.html -m 10
 
       - name: Upload ZAP report
         uses: actions/upload-artifact@v4
         with:
           name: zap-report
-          path: zap.html
+          path: zap-reports/zap.html
 
       - name: Fail on ZAP findings
         run: |
-          if grep -q "FAIL-NEW:" zap.html; then
+          if grep -q "FAIL-NEW:" zap-reports/zap.html; then
             echo "ZAP found issues"
             exit 1
           fi
