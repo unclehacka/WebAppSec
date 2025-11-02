@@ -30,13 +30,13 @@ jobs:
         run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin && grype sbom:sbom.json
 
       - name: Start test app container
-        run: docker run -d --name zap-target -p 8080:80 bkimminich/juice-shop
+        run: docker run -d --name zap-target -p 8080:3000 bkimminich/juice-shop
 
       - name: Wait for app to be ready
         run: |
           for i in $(seq 1 20); do
             if curl -s http://localhost:8080 >/dev/null; then exit 0; fi
-            sleep 1
+          sleep 1
           done
           exit 1
 
