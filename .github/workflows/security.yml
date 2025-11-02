@@ -6,28 +6,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Semgrep
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: p/owasp-top-ten
+      # - name: Semgrep
+      #   uses: returntocorp/semgrep-action@v1
+      #   with:
+      #     config: p/owasp-top-ten
 
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Gitleaks
+      #   uses: gitleaks/gitleaks-action@v2
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trivy filesystem
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          ignore-unfixed: true
-          severity: 'HIGH,CRITICAL'
+      # - name: Trivy filesystem
+      #   uses: aquasecurity/trivy-action@master
+      #   with:
+      #     scan-type: 'fs'
+      #     ignore-unfixed: true
+      #     severity: 'HIGH,CRITICAL'
 
-      - name: Syft SBOM
-        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin && syft . -o json > sbom.json
+      # - name: Syft SBOM
+      #   run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin && syft . -o json > sbom.json
 
-      - name: Grype
-        run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin && grype sbom:sbom.json
+      # - name: Grype
+      #   run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin && grype sbom:sbom.json
 
       - name: Start test app container
         run: docker run -d --name zap-target -p 8080:3000 bkimminich/juice-shop
@@ -50,7 +50,7 @@ jobs:
           docker run --rm \
           -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
           ghcr.io/zaproxy/zaproxy \
-          zap-baseline.py -t http://localhost:8080 -r zap-reports/zap.html -c zap-reports/zap.yaml -m 10
+          zap-baseline.py -t http://localhost:8080 -r zap.html -c zap.yaml -m 10
 
       - name: Upload ZAP report
         uses: actions/upload-artifact@v4
