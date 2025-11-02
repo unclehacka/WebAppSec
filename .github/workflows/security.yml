@@ -40,8 +40,16 @@ jobs:
           done
           exit 1
 
-      - name: OWASP ZAP Baseline
-        run: docker run --rm --network host -v $(pwd):/zap/wrk:rw ghcr.io/zaproxy/zaproxy zap-baseline.py -t http://localhost:8080 -r zap.html -m 10
+      - name: Set permissions
+        run: chmod -R a+rwX ${{ github.workspace }}
+
+      - name: Run ZAP Baseline
+        run: |
+          docker run --rm \
+          -v ${{ github.workspace }}:/zap/wrk:rw \
+          --user $(id -u):$(id -g) \
+          ghcr.io/zaproxy/zaproxy \
+          zap-baseline.py -t http://localhost:8080 -r zap.html -m 10
 
       - name: Upload ZAP report
         uses: actions/upload-artifact@v4
