@@ -1,5 +1,5 @@
 name: security-gates
-on: [push, pull_request]
+on: [pull_request]
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -28,4 +28,20 @@ jobs:
         run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin && grype sbom:sbom.json
 
       - name: OWASP ZAP Baseline
-        run: docker run --rm -v $(pwd):/zap/wrk:rw ghcr.io/zaproxy/zaproxy zap-baseline.py -t http://example.com -r zap.html -m 10
+        run: docker run --rm \
+          -v $(pwd):/zap/wrk:rw \
+          ghcr.io/zaproxy/zaproxy \
+          zap-baseline.py -t http://example.com -r zap.html -m 10
+
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: zap.html
+
+      - name: Fail on ZAP findings
+        run: |
+          if grep -q "FAIL-NEW:" zap.html; then
+            echo "ZAP found issues"
+            exit 1
+          fi
