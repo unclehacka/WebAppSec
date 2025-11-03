@@ -4,6 +4,9 @@ concurrency: security-gates-${{ github.ref }}
 
 jobs:
   sast:
+    permissions:
+      contents: read
+      security-events: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,10 +26,22 @@ jobs:
         if: hashFiles('package-lock.json') != ''
         run: npm ci --ignore-scripts
 
-      - name: Semgrep
-        uses: returntocorp/semgrep-action@v1
+      - name: Semgrep (OWASP + custom) > SARIF
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install semgrep
+          semgrep scan \
+            --config p/owasp-top-ten \
+            --config ./semgrep.yml \
+            --severity error \
+            --error \
+            --sarif -o semgrep.sarif
+
+      - name: Upload Semgrep SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          config: p/owasp-top-ten
+          sarif_file: semgrep.sarif
 
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2

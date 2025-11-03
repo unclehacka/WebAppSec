@@ -1,0 +1,19 @@
+rules:
+  - id: js-no-eval
+    languages: [javascript, typescript]
+    message: "Avoid eval()"
+    severity: ERROR
+    pattern: eval(...)
+
+  - id: dom-innerhtml-tainted
+    languages: [javascript, typescript]
+    message: "Avoid innerHTML with tainted data"
+    severity: ERROR
+    patterns:
+      - pattern: $EL.innerHTML = $X
+      - metavariable-pattern:
+          metavariable: $X
+          pattern-either:
+            - pattern: location.$A
+            - pattern: document.cookie
+            - pattern: request.$A
