@@ -29,36 +29,20 @@ jobs:
       # - name: Grype
       #   run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin && grype sbom:sbom.json
 
-      - name: Start services with docker-compose
-        run: docker compose up -d
-
-      - name: Wait for app on port 3000
+      - name: Start target (Juice Shop)
         run: |
-          for i in $(seq 1 20); do
-            if curl -s http://localhost:3000 >/dev/null; then exit 0; fi
-            sleep 1
+          docker compose up -d juice
+          for i in {1..60}; do
+            if curl -fsS http://localhost:3000 >/dev/null; then exit 0; fi
+            sleep 2
           done
-          exit 1
+          echo "Juice Shop did not start in time" >&2; docker compose logs --no-color; exit 1
 
-      - name: Prepare zap-reports folder
-        run: mkdir -p ${{ github.workspace }}/zap-reports
-
-      - name: Run ZAP Baseline scan
-        run: docker run --rm -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw --network scan-net ghcr.io/zaproxy/zaproxy zap-baseline.py -t http://juice-shop:3000 -r zap.html -c zap.yaml -m 10
-
-      - name: Upload ZAP report
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-report
-          path: zap-reports/zap.html
-
-      - name: Fail on ZAP findings
-        run: |
-          if grep -q "FAIL-NEW:" zap-reports/zap.html; then
-            echo "ZAP found issues"
-            exit 1
-          fi
-
-      - name: Cleanup services
-        if: always()
-        run: docker compose down
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with: 
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: 'http://localhost:3000'
+          cmd_options: '-m 3 -d -I -r report.html -J report.json'
+          fail_action: true
+          artifact_name: 'ZAP Report'
