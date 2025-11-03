@@ -24,7 +24,7 @@ jobs:
           node-version: "22"
           cache: "npm"
       - uses: actions/setup-python@v5
-        with: { python-version: '3.11', cache: 'pip' }
+        with: { python-version: '3.11' }
 
       - name: Enforce lockfile
         if: hashFiles('package.json') != '' && hashFiles('package-lock.json') == ''
