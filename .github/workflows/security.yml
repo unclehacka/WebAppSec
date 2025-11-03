@@ -101,7 +101,7 @@ jobs:
           grype sbom:sbom.json --fail-on high
       - name: tfsec (Terraform)
         if: hashFiles('**/*.tf') != ''
-        uses: aquasecurity/tfsec-action@v1
+        uses: aquasecurity/tfsec-action@v1.0.0
         with:
           soft_fail: false
 
