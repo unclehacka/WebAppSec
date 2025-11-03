@@ -7,5 +7,16 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unclehacka/WebAppSec.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/unclehacka/WebAppSec/issues"
+  },
+  "homepage": "https://github.com/unclehacka/WebAppSec#readme",
+  "package-manager": "npm@10.9.0"
 }
