@@ -55,8 +55,16 @@ jobs:
       - name: Gitleaks (PR)
         if: github.event_name == 'pull_request'
         uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --redact -v --exit-code=2 --report-format sarif --report-path gitleaks.sarif
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Gitleaks SARIF (PR)
+        if: always() && github.event_name == 'pull_request' && hashFiles('gitleaks.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks.sarif
 
       - name: Gitleaks (repo scan)
         if: github.event_name != 'pull_request'
@@ -65,7 +73,13 @@ jobs:
           curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz -o /tmp/gitleaks.tgz
           tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
           install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
-          gitleaks detect --no-git --redact --exit-code 2 --report-format sarif --report-path results.sarif
+          gitleaks detect --no-git --redact --exit-code 2 --report-format sarif --report-path gitleaks.sarif
+
+      - name: Upload Gitleaks SARIF (repo)
+        if: always() && github.event_name != 'pull_request' && hashFiles('gitleaks.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks.sarif
 
       - name: Trivy filesystem
         uses: aquasecurity/trivy-action@master
@@ -85,28 +99,48 @@ jobs:
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
           grype sbom:sbom.json --fail-on high
+      - name: tfsec (Terraform)
+        if: hashFiles('**/*.tf') != ''
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          soft_fail: false
 
+      - name: Checkov (Terraform/K8s/CFN)
+        if: hashFiles('**/*.tf') != '' || hashFiles('**/*.yml') != '' || hashFiles('**/*.yaml') != ''
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform,kubernetes,cloudformation
+          quiet: true
+          soft_fail: false
+          output_format: sarif
+          output_file_path: checkov.sarif
+
+      - name: Upload Checkov SARIF
+        if: always() && hashFiles('checkov.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov.sarif
   dast:
     name: DAST ZAP
-    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      security-events: write
+    if: ${{ always() && (github.event_name != 'push' || github.ref == 'refs/heads/main') }}
     needs: sast
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
       juice:
-        image: bkimminich/juice-shop
-        ports:
-          - 3000:3000
+        image: bkimminich/juice-shop:latest
+        ports: [ "3000:3000" ]
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Wait for target
         run: |
-          for i in {1..60}; do
-            curl -fsS http://localhost:3000 >/dev/null && exit 0
-            sleep 2
-          done
+          for i in {1..60}; do curl -fsS http://localhost:3000 >/dev/null && exit 0; sleep 2; done
           echo "Target not healthy" >&2; exit 1
 
       - name: ZAP Baseline
@@ -118,6 +152,24 @@ jobs:
           fail_action: true
           allow_issue_writing: false
           artifact_name: "zap_baseline"
+
+      - name: Trivy image (Juice Shop)
+        if: always()
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'bkimminich/juice-shop:latest'
+          vuln-type: 'os,library'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
+          format: 'sarif'
+          output: 'trivy-image.sarif'
+
+      - name: Upload Trivy SARIF (image)
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
 
       - name: Upload ZAP reports
         if: always()
