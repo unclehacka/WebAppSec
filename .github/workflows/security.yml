@@ -1,49 +1,81 @@
 name: security-gates
 on: [pull_request]
+concurrency: security-gates-${{ github.ref }}
+
 jobs:
-  scan:
+  sast:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
-      # - name: Semgrep
-      #   uses: returntocorp/semgrep-action@v1
-      #   with:
-      #     config: p/owasp-top-ten
+      - name: Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/owasp-top-ten
 
-      # - name: Gitleaks
-      #   uses: gitleaks/gitleaks-action@v2
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Trivy filesystem
-      #   uses: aquasecurity/trivy-action@master
-      #   with:
-      #     scan-type: 'fs'
-      #     ignore-unfixed: true
-      #     severity: 'HIGH,CRITICAL'
+      - name: Trivy filesystem
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
 
-      # - name: Syft SBOM
-      #   run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin && syft . -o json > sbom.json
-
-      # - name: Grype
-      #   run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin && grype sbom:sbom.json
-
-      - name: Start target (Juice Shop)
+      - name: Syft SBOM
         run: |
-          docker compose up -d juice
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft . -o json > sbom.json
+
+      - name: Grype on SBOM
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+          grype sbom:sbom.json
+
+  dast:
+    needs: sast
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      juice:
+        image: bkimminich/juice-shop
+        ports:
+          - 3000:3000
+        options: >-
+          --health-cmd "curl -fsS http://localhost:3000 || exit 1"
+          --health-interval 5s --health-timeout 2s --health-retries 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for target
+        run: |
           for i in {1..60}; do
-            if curl -fsS http://localhost:3000 >/dev/null; then exit 0; fi
+            curl -fsS http://localhost:3000 >/dev/null && exit 0
             sleep 2
           done
-          echo "Juice Shop did not start in time" >&2; docker compose logs --no-color; exit 1
+          echo "Target not healthy" >&2; exit 1
 
-      - name: OWASP ZAP Baseline Scan
+      - name: ZAP Baseline
         uses: zaproxy/action-baseline@v0.15.0
         with:
-          allow_issue_writing: false
-          target: "http://localhost:3000"
-          rules_file_name: ".zap/rules.tsv"
-          cmd_options: "-m 3 -d -I"
+          target: 'http://localhost:3000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-m 3 -d -I'
           fail_action: true
-          artifact_name: "zap_baseline"
+          allow_issue_writing: false
+          artifact_name: 'zap_baseline'
+
+      - name: Upload ZAP reports (explicit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap_baseline_reports
+          path: |
+            report_html.html
+            report_md.md
+            report_json.json
