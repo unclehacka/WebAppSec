@@ -40,17 +40,13 @@ jobs:
           done
           exit 1
 
-      - name: Get docker-compose network
-        id: get_network
-        run: echo "NETWORK=$(docker network ls --filter name=$(basename $GITHUB_WORKSPACE)_default -q)" >> $GITHUB_OUTPUT
-
       - name: Prepare zap-reports folder
         run: mkdir -p ${{ github.workspace }}/zap-reports
 
       - name: Run ZAP Baseline scan
         run: docker run --rm \
           -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
-          --network ${{ steps.get_network.outputs.NETWORK }} \
+          --network scan-net \
           ghcr.io/zaproxy/zaproxy \
           zap-baseline.py -t http://juice-shop:3000 -r zap.html -c zap.yaml -m 10
 

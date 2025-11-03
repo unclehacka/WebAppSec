@@ -1,7 +1,13 @@
 version: '3.8'
 
+networks:
+  scan-net:
+    driver: bridge
+
 services:
   juice-shop:
     image: bkimminich/juice-shop
     ports:
       - "3000:3000"
+    networks:
+      - scan-net
