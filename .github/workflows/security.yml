@@ -44,11 +44,7 @@ jobs:
         run: mkdir -p ${{ github.workspace }}/zap-reports
 
       - name: Run ZAP Baseline scan
-        run: docker run --rm \
-          -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
-          --network scan-net \
-          ghcr.io/zaproxy/zaproxy \
-          zap-baseline.py -t http://juice-shop:3000 -r zap.html -c zap.yaml -m 10
+        run: docker run --rm -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw --network scan-net ghcr.io/zaproxy/zaproxy zap-baseline.py -t http://juice-shop:3000 -r zap.html -c zap.yaml -m 10
 
       - name: Upload ZAP report
         uses: actions/upload-artifact@v4
