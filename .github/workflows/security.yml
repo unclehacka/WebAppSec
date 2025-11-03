@@ -45,9 +45,6 @@ jobs:
         image: bkimminich/juice-shop
         ports:
           - 3000:3000
-        options: >-
-          --health-cmd "curl -fsS http://localhost:3000 || exit 1"
-          --health-interval 5s --health-timeout 2s --health-retries 30
 
     steps:
       - uses: actions/checkout@v4
@@ -69,13 +66,3 @@ jobs:
           fail_action: true
           allow_issue_writing: false
           artifact_name: 'zap_baseline'
-
-      - name: Upload ZAP reports (explicit)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap_baseline_reports
-          path: |
-            report_html.html
-            report_md.md
-            report_json.json
