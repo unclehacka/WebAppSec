@@ -30,7 +30,7 @@ jobs:
       #   run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin && grype sbom:sbom.json
 
       - name: Start services with docker-compose
-        run: docker-compose up -d
+        run: docker compose up -d
 
       - name: Wait for app on port 3000
         run: |
@@ -69,4 +69,4 @@ jobs:
 
       - name: Cleanup services
         if: always()
-        run: docker-compose down
+        run: docker compose down
