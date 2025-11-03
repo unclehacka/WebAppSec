@@ -2,7 +2,7 @@ name: security-gates
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [ main ]
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
@@ -10,6 +10,7 @@ concurrency: security-gates-${{ github.ref }}
 
 jobs:
   sast:
+    name: SAST gates
     permissions:
       contents: read
       security-events: write
@@ -22,6 +23,8 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11', cache: 'pip' }
 
       - name: Enforce lockfile
         if: hashFiles('package.json') != '' && hashFiles('package-lock.json') == ''
@@ -40,8 +43,7 @@ jobs:
           semgrep scan \
             --config p/owasp-top-ten \
             --config ./semgrep.yml \
-            --severity ERROR \
-            --error \
+            --severity ERROR --error --metrics=off \
             --sarif -o semgrep.sarif
 
       - name: Upload Semgrep SARIF
@@ -50,10 +52,20 @@ jobs:
         with:
           sarif_file: semgrep.sarif
 
-      - name: Gitleaks
+      - name: Gitleaks (PR)
+        if: github.event_name == 'pull_request'
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Gitleaks (repo scan)
+        if: github.event_name != 'pull_request'
+        run: |
+          ver=8.24.3
+          curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz -o /tmp/gitleaks.tgz
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks detect --no-git --redact --exit-code 2 --report-format sarif --report-path results.sarif
 
       - name: Trivy filesystem
         uses: aquasecurity/trivy-action@master
@@ -61,6 +73,7 @@ jobs:
           scan-type: fs
           ignore-unfixed: true
           severity: HIGH,CRITICAL
+          skip-dirs: node_modules
           exit-code: '1'
 
       - name: Syft SBOM
@@ -74,6 +87,7 @@ jobs:
           grype sbom:sbom.json --fail-on high
 
   dast:
+    name: DAST ZAP
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     needs: sast
     runs-on: ubuntu-latest
@@ -104,3 +118,14 @@ jobs:
           fail_action: true
           allow_issue_writing: false
           artifact_name: "zap_baseline"
+
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap_baseline_reports
+          path: |
+            report_html.html
+            report_md.md
+            report_json.json
+          retention-days: 14
