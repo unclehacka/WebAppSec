@@ -40,9 +40,10 @@ jobs:
           done
           exit 1
 
-      - name: Prepare zap-reports folder
+      - name: Prepare zap-reports folder and files
         run: |
           mkdir -p ${{ github.workspace }}/zap-reports
+          touch ${{ github.workspace }}/zap-reports/zap.yaml
           chmod -R a+rwX ${{ github.workspace }}/zap-reports
 
       - name: Run ZAP Baseline
