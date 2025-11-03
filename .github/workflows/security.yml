@@ -1,0 +1,68 @@
+name: security-gates
+on: [pull_request]
+concurrency: security-gates-${{ github.ref }}
+
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/owasp-top-ten
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trivy filesystem
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Syft SBOM
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft . -o json > sbom.json
+
+      - name: Grype on SBOM
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+          grype sbom:sbom.json
+
+  dast:
+    needs: sast
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      juice:
+        image: bkimminich/juice-shop
+        ports:
+          - 3000:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for target
+        run: |
+          for i in {1..60}; do
+            curl -fsS http://localhost:3000 >/dev/null && exit 0
+            sleep 2
+          done
+          echo "Target not healthy" >&2; exit 1
+
+      - name: ZAP Baseline
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: 'http://localhost:3000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-m 3 -d -I'
+          fail_action: true
+          allow_issue_writing: false
+          artifact_name: 'zap_baseline'
