@@ -41,7 +41,7 @@ jobs:
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.15.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          allow_issue_writing: false
           target: "http://localhost:3000"
           rules_file_name: ".zap/rules.tsv"
           cmd_options: "-m 3 -d -I"
