@@ -132,7 +132,7 @@ jobs:
     timeout-minutes: 25
     services:
       juice:
-        image: bkimminich/juice-shop@sha256:latest
+        image: bkimminich/juice-shop:latest
         ports: [ "3000:3000" ]
 
     steps:
@@ -157,7 +157,7 @@ jobs:
         if: always()
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'bkimminich/juice-shop@sha256:latest'
+          image-ref: 'bkimminich/juice-shop:latest'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
           ignore-unfixed: true
