@@ -1,0 +1,11 @@
+services:
+  juice:
+    image: bkimminich/juice-shop:latest
+    ports: ["3000"] # hide origin/backend
+
+  waf:
+    image: owasp/modsecurity-crs:nginx
+    environment:
+      BACKEND: "http://juice:3000"
+    ports: ["8080:8080"]  # WAF/ingress endpoint
+    depends_on: ["juice"]
