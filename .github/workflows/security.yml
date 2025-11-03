@@ -29,29 +29,30 @@ jobs:
       # - name: Grype
       #   run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin && grype sbom:sbom.json
 
-      - name: Start test app container
-        run: docker run -d --name zap-target -p 8080:3000 bkimminich/juice-shop
+      - name: Start services with docker-compose
+        run: docker-compose up -d
 
-      - name: Wait for app to be ready
+      - name: Wait for app on port 3000
         run: |
           for i in $(seq 1 20); do
-            if curl -s http://localhost:8080 >/dev/null; then exit 0; fi
+            if curl -s http://localhost:3000 >/dev/null; then exit 0; fi
             sleep 1
           done
           exit 1
 
-      - name: Prepare zap-reports folder and files
-        run: |
-          mkdir -p ${{ github.workspace }}/zap-reports
-          touch ${{ github.workspace }}/zap-reports/zap.yaml
-          chmod -R a+rwX ${{ github.workspace }}/zap-reports
+      - name: Get docker-compose network
+        id: get_network
+        run: echo "NETWORK=$(docker network ls --filter name=$(basename $GITHUB_WORKSPACE)_default -q)" >> $GITHUB_OUTPUT
 
-      - name: Run ZAP Baseline
-        run: |
-          docker run --rm \
+      - name: Prepare zap-reports folder
+        run: mkdir -p ${{ github.workspace }}/zap-reports
+
+      - name: Run ZAP Baseline scan
+        run: docker run --rm \
           -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
+          --network ${{ steps.get_network.outputs.NETWORK }} \
           ghcr.io/zaproxy/zaproxy \
-          zap-baseline.py -t http://localhost:8080 -r zap.html -c zap.yaml -m 10
+          zap-baseline.py -t http://juice-shop:3000 -r zap.html -c zap.yaml -m 10
 
       - name: Upload ZAP report
         uses: actions/upload-artifact@v4
@@ -66,6 +67,6 @@ jobs:
             exit 1
           fi
 
-      - name: Cleanup test container
+      - name: Cleanup services
         if: always()
-        run: docker rm -f zap-target || true
+        run: docker-compose down
