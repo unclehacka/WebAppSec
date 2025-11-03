@@ -33,7 +33,7 @@ jobs:
           semgrep scan \
             --config p/owasp-top-ten \
             --config ./semgrep.yml \
-            --severity error \
+            --severity ERROR \
             --error \
             --sarif -o semgrep.sarif
 
