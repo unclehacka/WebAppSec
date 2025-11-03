@@ -1,5 +1,11 @@
 name: security-gates
-on: [pull_request]
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
 concurrency: security-gates-${{ github.ref }}
 
 jobs:
@@ -55,6 +61,7 @@ jobs:
           scan-type: fs
           ignore-unfixed: true
           severity: HIGH,CRITICAL
+          exit-code: '1'
 
       - name: Syft SBOM
         run: |
@@ -64,9 +71,10 @@ jobs:
       - name: Grype on SBOM
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-          grype sbom:sbom.json
+          grype sbom:sbom.json --fail-on high
 
   dast:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     needs: sast
     runs-on: ubuntu-latest
     timeout-minutes: 25
