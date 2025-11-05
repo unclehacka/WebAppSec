@@ -1,0 +1,4 @@
+node_modules
+.idea
+.zap/zap_local.*
+.zap/zap.yaml
