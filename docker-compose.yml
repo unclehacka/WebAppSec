@@ -10,6 +10,6 @@ services:
       PORT: "8080"
     ports:
       - "127.0.0.1:8080:8080"
-    depends_on: ["juice"]
+    depends_on: [ "juice" ]
     volumes:
       - ./nginx/default.conf:/etc/nginx/templates/conf.d/default.conf.template:ro
