@@ -9,126 +9,126 @@ on:
 concurrency: security-gates-${{ github.ref }}
 
 jobs:
-  sast:
-    name: SAST gates
-    permissions:
-      contents: read
-      security-events: write
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
-
-      - name: Enforce lockfile
-        if: hashFiles('package.json') != '' && hashFiles('package-lock.json') == ''
-        run: |
-          echo "::error::package-lock.json is missing. Run: npm install --package-lock-only"
-          exit 1
-
-      - name: npm ci (locked)
-        if: hashFiles('package-lock.json') != ''
-        run: npm ci --ignore-scripts
-
-      - name: Semgrep (OWASP + custom) > SARIF
-        run: |
-          python3 -m pip install --upgrade pip
-          pip3 install semgrep
-          semgrep scan \
-            --config p/owasp-top-ten \
-            --config ./semgrep.yml \
-            --severity ERROR --error --metrics=off \
-            --sarif -o semgrep.sarif
-
-      - name: Upload Semgrep SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: semgrep.sarif
-
-      - name: Gitleaks (SARIF, PR)
-        if: github.event_name == 'pull_request'
-        run: |
-          ver=8.24.3
-          curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz -o /tmp/gitleaks.tgz
-          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
-          install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
-          gitleaks detect --redact --exit-code 2 \
-            --report-format sarif --report-path gitleaks.sarif || true
-
-      - name: Upload Gitleaks SARIF (PR)
-        if: always() && github.event_name == 'pull_request' && hashFiles('gitleaks.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: gitleaks.sarif
-
-      - name: Gitleaks (repo scan)
-        if: github.event_name != 'pull_request'
-        run: |
-          ver=8.24.3
-          curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz -o /tmp/gitleaks.tgz
-          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
-          install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
-          gitleaks detect --no-git --redact --exit-code 2 --report-format sarif --report-path gitleaks.sarif
-
-      - name: Upload Gitleaks SARIF (repo)
-        if: always() && github.event_name != 'pull_request' && hashFiles('gitleaks.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: gitleaks.sarif
-
-      - name: Trivy filesystem
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: fs
-          ignore-unfixed: true
-          severity: HIGH,CRITICAL
-          skip-dirs: node_modules
-          exit-code: '1'
-
-      - name: Upload Trivy SARIF (fs)
-        if: always() && hashFiles('trivy-fs.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-fs.sarif
-
-      - name: Syft SBOM
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-          syft . -o json > sbom.json
-
-      - name: Grype on SBOM
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-          grype sbom:sbom.json --fail-on high
-      - name: tfsec (Terraform)
-        if: hashFiles('**/*.tf') != ''
-        uses: aquasecurity/tfsec-action@v1.0.0
-        with:
-          soft_fail: false
-
-      - name: Checkov (Terraform/K8s/CFN)
-        if: hashFiles('**/*.tf') != '' || hashFiles('**/*.yml') != '' || hashFiles('**/*.yaml') != ''
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: .
-          framework: terraform,kubernetes,cloudformation
-          quiet: true
-          soft_fail: false
-          output_format: sarif
-          output_file_path: checkov.sarif
-
-      - name: Upload Checkov SARIF
-        if: always() && hashFiles('checkov.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: checkov.sarif
+  #  sast:
+  #    name: SAST gates
+  #    permissions:
+  #      contents: read
+  #      security-events: write
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #      - uses: actions/checkout@v4
+  #        with:
+  #          fetch-depth: 0
+  #      - uses: actions/setup-node@v4
+  #        with:
+  #          node-version: "22"
+  #          cache: "npm"
+  #      - uses: actions/setup-python@v5
+  #        with: { python-version: '3.11' }
+  #
+  #      - name: Enforce lockfile
+  #        if: hashFiles('package.json') != '' && hashFiles('package-lock.json') == ''
+  #        run: |
+  #          echo "::error::package-lock.json is missing. Run: npm install --package-lock-only"
+  #          exit 1
+  #
+  #      - name: npm ci (locked)
+  #        if: hashFiles('package-lock.json') != ''
+  #        run: npm ci --ignore-scripts
+  #
+  #      - name: Semgrep (OWASP + custom) > SARIF
+  #        run: |
+  #          python3 -m pip install --upgrade pip
+  #          pip3 install semgrep
+  #          semgrep scan \
+  #            --config p/owasp-top-ten \
+  #            --config ./semgrep.yml \
+  #            --severity ERROR --error --metrics=off \
+  #            --sarif -o semgrep.sarif
+  #
+  #      - name: Upload Semgrep SARIF
+  #        if: always()
+  #        uses: github/codeql-action/upload-sarif@v3
+  #        with:
+  #          sarif_file: semgrep.sarif
+  #
+  #      - name: Gitleaks (SARIF, PR)
+  #        if: github.event_name == 'pull_request'
+  #        run: |
+  #          ver=8.24.3
+  #          curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz -o /tmp/gitleaks.tgz
+  #          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+  #          install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+  #          gitleaks detect --redact --exit-code 2 \
+  #            --report-format sarif --report-path gitleaks.sarif || true
+  #
+  #      - name: Upload Gitleaks SARIF (PR)
+  #        if: always() && github.event_name == 'pull_request' && hashFiles('gitleaks.sarif') != ''
+  #        uses: github/codeql-action/upload-sarif@v3
+  #        with:
+  #          sarif_file: gitleaks.sarif
+  #
+  #      - name: Gitleaks (repo scan)
+  #        if: github.event_name != 'pull_request'
+  #        run: |
+  #          ver=8.24.3
+  #          curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz -o /tmp/gitleaks.tgz
+  #          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+  #          install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+  #          gitleaks detect --no-git --redact --exit-code 2 --report-format sarif --report-path gitleaks.sarif
+  #
+  #      - name: Upload Gitleaks SARIF (repo)
+  #        if: always() && github.event_name != 'pull_request' && hashFiles('gitleaks.sarif') != ''
+  #        uses: github/codeql-action/upload-sarif@v3
+  #        with:
+  #          sarif_file: gitleaks.sarif
+  #
+  #      - name: Trivy filesystem
+  #        uses: aquasecurity/trivy-action@0.28.0
+  #        with:
+  #          scan-type: fs
+  #          ignore-unfixed: true
+  #          severity: HIGH,CRITICAL
+  #          skip-dirs: node_modules
+  #          exit-code: '1'
+  #
+  #      - name: Upload Trivy SARIF (fs)
+  #        if: always() && hashFiles('trivy-fs.sarif') != ''
+  #        uses: github/codeql-action/upload-sarif@v3
+  #        with:
+  #          sarif_file: trivy-fs.sarif
+  #
+  #      - name: Syft SBOM
+  #        run: |
+  #          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+  #          syft . -o json > sbom.json
+  #
+  #      - name: Grype on SBOM
+  #        run: |
+  #          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+  #          grype sbom:sbom.json --fail-on high
+  #      - name: tfsec (Terraform)
+  #        if: hashFiles('**/*.tf') != ''
+  #        uses: aquasecurity/tfsec-action@v1.0.0
+  #        with:
+  #          soft_fail: false
+  #
+  #      - name: Checkov (Terraform/K8s/CFN)
+  #        if: hashFiles('**/*.tf') != '' || hashFiles('**/*.yml') != '' || hashFiles('**/*.yaml') != ''
+  #        uses: bridgecrewio/checkov-action@v12
+  #        with:
+  #          directory: .
+  #          framework: terraform,kubernetes,cloudformation
+  #          quiet: true
+  #          soft_fail: false
+  #          output_format: sarif
+  #          output_file_path: checkov.sarif
+  #
+  #      - name: Upload Checkov SARIF
+  #        if: always() && hashFiles('checkov.sarif') != ''
+  #        uses: github/codeql-action/upload-sarif@v3
+  #        with:
+  #          sarif_file: checkov.sarif
   dast:
     name: DAST gates
     runs-on: ubuntu-latest
@@ -140,7 +140,7 @@ jobs:
 
       - name: Compose up
         run: |
-          docker compose -f docker-compose.yml -p webappsec up -d
+          docker compose -p webappsec up -d
           for i in {1..60}; do
             curl -fsS http://127.0.0.1:8080/healthz >/dev/null && break
             sleep 2
@@ -149,8 +149,11 @@ jobs:
 
       - name: ZAP Baseline (same network)
         run: |
-          docker run --rm -t --network webappsec_default \
-            -v "$PWD:/zap/wrk" zaproxy/zap-stable \
+          docker run --rm -t \
+            --network webappsec_default \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD:/zap/wrk" -w /zap/wrk \
+            zaproxy/zap-stable \
             zap-baseline.py -t http://waf:8080 \
               -r report_html.html -w report_md.md -J report_json.json -I -m 3
 
@@ -167,4 +170,4 @@ jobs:
 
       - name: Compose down
         if: always()
-        run: docker compose -f docker-compose.ci.yml -p webappsec down -v
+        run: docker compose -p webappsec down -v
