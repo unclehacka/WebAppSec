@@ -165,8 +165,7 @@ jobs:
           # генерим конфиг и перегружаем
           docker exec "$WAF_ID" sh -lc 'envsubst < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -t && nginx -s reload'
 
-      - name:
-          Sanity: headers
+      - name: Sanity headers
         run: |
           curl -sD - -o /dev/null http://localhost:8080 | tr -d '\r' \
           | awk 'BEGIN{IGNORECASE=1} /^Content-Security-Policy|^Access-Control-Allow-Origin|^Vary: Origin|^X-Content-Type-Options/{print}'
