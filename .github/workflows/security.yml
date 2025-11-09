@@ -139,9 +139,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Compose up
-        run: |
-          docker compose -p webappsec up -d
-          for i in {1..60}; do curl -fsS http://127.0.0.1:8080/healthz >/dev/null && break; sleep 2; done
+        run: docker compose -p webappsec up -d --wait
 
       - name: ZAP Baseline scan
         run: |
