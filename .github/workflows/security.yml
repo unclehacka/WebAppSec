@@ -145,13 +145,12 @@ jobs:
 
       - name: ZAP Baseline scan
         run: |
-          docker run --name zapscan --network webappsec_default \
+          docker run --rm -t \
+          --network webappsec_default \
+          --user 0:0 \
+          -v "$PWD:/zap/wrk" -w /zap/wrk \
           zaproxy/zap-stable \
-          zap-baseline.py -t http://waf:8080 --autooff -I -m 3 \
-          -r /tmp/zap_report.html
-          
-          docker cp zapscan:/tmp/zap_report.html .
-          docker rm -f zapscan
+          zap-baseline.py -t http://waf:8080 -I -m 3 -r zap_report.html
 
       - name: Upload ZAP
         if: always()
