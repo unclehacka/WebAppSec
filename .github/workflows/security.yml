@@ -64,7 +64,7 @@ jobs:
           tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
           install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
           gitleaks detect --redact --exit-code 2 \
-            --report-format sarif --report-path gitleaks.sarif || true
+            --report-format sarif --report-path gitleaks.sarif
 
       - name: Upload Gitleaks SARIF (PR)
         if: always() && github.event_name == 'pull_request' && hashFiles('gitleaks.sarif') != ''
@@ -94,6 +94,8 @@ jobs:
           ignore-unfixed: true
           severity: HIGH,CRITICAL
           skip-dirs: node_modules
+          format: sarif
+          output: trivy-fs.sarif
           exit-code: '1'
 
       - name: Upload Trivy SARIF (fs)
@@ -168,11 +170,13 @@ jobs:
           mv zap_report.html public/zap/index.html
 
       - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: public
 
       - name: Deploy to Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         id: deploy
         uses: actions/deploy-pages@v4
 
