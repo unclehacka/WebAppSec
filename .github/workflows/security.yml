@@ -142,7 +142,7 @@ jobs:
         run: docker compose -p webappsec up -d
 
       - name: Wait for WAF
-          run: |
+        run: |
             curl -sSf \
               --retry 60 --retry-delay 2 \
               --retry-connrefused --retry-all-errors \
