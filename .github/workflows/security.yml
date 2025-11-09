@@ -132,7 +132,7 @@ jobs:
   dast:
     name: DAST gates
     runs-on: ubuntu-latest
-    needs: sast
+    # needs: sast
     timeout-minutes: 25
 
     steps:
