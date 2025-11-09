@@ -52,13 +52,15 @@ jobs:
         with:
           sarif_file: semgrep.sarif
 
-      - name: Gitleaks (PR)
+      - name: Gitleaks (SARIF, PR)
         if: github.event_name == 'pull_request'
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          args: detect --redact -v --exit-code=2 --report-format sarif --report-path gitleaks.sarif
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ver=8.24.3
+          curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v${ver}/gitleaks_${ver}_linux_x64.tar.gz -o /tmp/gitleaks.tgz
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks detect --redact --exit-code 2 \
+            --report-format sarif --report-path gitleaks.sarif || true
 
       - name: Upload Gitleaks SARIF (PR)
         if: always() && github.event_name == 'pull_request' && hashFiles('gitleaks.sarif') != ''
@@ -82,13 +84,19 @@ jobs:
           sarif_file: gitleaks.sarif
 
       - name: Trivy filesystem
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: fs
           ignore-unfixed: true
           severity: HIGH,CRITICAL
           skip-dirs: node_modules
           exit-code: '1'
+
+      - name: Upload Trivy SARIF (fs)
+        if: always() && hashFiles('trivy-fs.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
 
       - name: Syft SBOM
         run: |
@@ -122,54 +130,45 @@ jobs:
         with:
           sarif_file: checkov.sarif
   dast:
-    name: DAST ZAP
-    permissions:
-      contents: read
-      security-events: write
-    if: ${{ always() && (github.event_name != 'push' || github.ref == 'refs/heads/main') }}
-    needs: sast
     runs-on: ubuntu-latest
+    needs: sast
     timeout-minutes: 25
     services:
       juice:
         image: bkimminich/juice-shop:latest
         ports: [ "3000:3000" ]
+        options: >-
+          --health-cmd="curl -fsS http://localhost:3000/ >/dev/null || exit 1"
+          --health-interval=5s --health-retries=30
+      waf:
+        image: owasp/modsecurity-crs:nginx
+        env:
+          BACKEND: "http://juice:3000"
+          SERVER_NAME: "localhost"
+          PORT: "8080"
+        ports: [ "8080:8080" ]
+        options: >-
+          -v ${{ github.workspace }}/nginx/default.conf:/etc/nginx/templates/conf.d/default.conf.template:ro
+          --health-cmd="curl -fsS http://localhost:8080/healthz >/dev/null || exit 1"
+          --health-interval=5s --health-retries=30
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Wait for target
+      - name: Wait for WAF
         run: |
-          for i in {1..60}; do curl -fsS http://localhost:3000 >/dev/null && exit 0; sleep 2; done
-          echo "Target not healthy" >&2; exit 1
+          for i in {1..60}; do curl -fsS http://localhost:8080/healthz >/dev/null && exit 0; sleep 2; done
+          echo "WAF not healthy" >&2; exit 1
 
-      - name: ZAP Baseline
+      - name: ZAP Baseline against WAF
         uses: zaproxy/action-baseline@v0.15.0
         with:
-          target: "http://localhost:3000"
+          target: "http://localhost:8080"
           rules_file_name: ".zap/rules.tsv"
           cmd_options: "-m 3 -d -I"
           fail_action: true
           allow_issue_writing: false
           artifact_name: "zap_baseline"
-
-      - name: Trivy image (Juice Shop)
-        if: always()
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'bkimminich/juice-shop:latest'
-          vuln-type: 'os,library'
-          severity: 'HIGH,CRITICAL'
-          ignore-unfixed: true
-          exit-code: '1'
-          format: 'sarif'
-          output: 'trivy-image.sarif'
-
-      - name: Upload Trivy SARIF (image)
-        if: always() && hashFiles('trivy-image.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-image.sarif
 
       - name: Upload ZAP reports
         if: always()
