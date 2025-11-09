@@ -7,6 +7,10 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch:
 concurrency: security-gates-${{ github.ref }}
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   sast:
@@ -141,13 +145,6 @@ jobs:
       - name: Compose up
         run: docker compose -p webappsec up -d
 
-      - name: Wait for WAF
-          run: |
-            curl -sSf \
-              --retry 60 --retry-delay 2 \
-              --retry-connrefused --retry-all-errors \
-              http://127.0.0.1:8080/healthz >/dev/null
-
       - name: ZAP Baseline scan
         run: |
           docker run --rm -t \
@@ -164,6 +161,20 @@ jobs:
           name: zap_baseline_html
           path: zap_report.html
           retention-days: 14
+
+      - name: Prepare Pages artifact
+        run: |
+          mkdir -p public/zap
+          mv zap_report.html public/zap/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
 
       - name: Compose down
         if: always()
