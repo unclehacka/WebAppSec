@@ -1,0 +1,15 @@
+services:
+  juice:
+    image: bkimminich/juice-shop:v19.0.0
+
+  waf:
+    image: owasp/modsecurity-crs:3.3.5-nginx-202308071108
+    environment:
+      BACKEND: "http://juice:3000"
+      SERVER_NAME: "localhost"
+      PORT: "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on: [ "juice" ]
+    volumes:
+      - ./nginx/default.week1.conf:/etc/nginx/templates/conf.d/default.conf.template:ro
