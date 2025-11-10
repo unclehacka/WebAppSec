@@ -1,0 +1,29 @@
+HTTP/1.1 200 OK
+Server: nginx/1.28.0
+Date: Sun, 09 Nov 2025 17:06:32 GMT
+Content-Type: text/html; charset=UTF-8
+Content-Length: 75002
+Connection: keep-alive
+X-Content-Type-Options: nosniff
+X-Recruiting: /#/jobs
+Accept-Ranges: bytes
+Cache-Control: public, max-age=0
+Last-Modified: Sun, 09 Nov 2025 16:41:56 GMT
+ETag: W/"124fa-19a697ee8c4"
+Vary: Accept-Encoding
+Access-Control-Allow-Origin: http://localhost:3000
+Vary: Origin
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS
+Access-Control-Allow-Headers: Authorization,Content-Type,Accept,Origin
+Access-Control-Max-Age: 1728000
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Cross-Origin-Resource-Policy: same-site
+Cross-Origin-Opener-Policy: same-origin
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+Content-Security-Policy: default-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self';
+       img-src 'self' data:; script-src 'self' 'nonce-PLACEHOLDER'; style-src 'self' 'nonce-PLACEHOLDER';
+       font-src 'self'; connect-src 'self'; media-src 'none'; object-src 'none'; manifest-src 'self'; frame-src 'none';
+

@@ -1,6 +1,0 @@
-# id<TAB>ACTION<TAB>comment
-10202	FAIL	Absence of Anti-CSRF Tokens
-10020	FAIL	X-Frame-Options Header Not Set
-10021	FAIL	X-Content-Type-Options Missing
-10038	FAIL	Content Security Policy Header Not Set
-10015	IGNORE	Cache-control Missing
