@@ -151,10 +151,10 @@ jobs:
         run: |
           docker run --rm -t \
           --network webappsec_default \
-          --user 0:0 \
-          -v "$PWD:/zap/wrk" -w /zap/wrk \
+          --user 0:0 -v "$PWD:/zap/wrk" -w /zap/wrk \
           zaproxy/zap-stable \
-          zap-baseline.py -t http://waf:8080 -I -m 3 -r zap_report.html
+          zap-baseline.py -t http://waf:8080 \
+          -c .zap/rules.conf -I -m 3 -r zap_report.html
 
       - name: Upload ZAP
         if: always()
