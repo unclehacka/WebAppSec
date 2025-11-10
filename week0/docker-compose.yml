@@ -1,0 +1,11 @@
+services:
+  juice:
+    image: bkimminich/juice-shop:latest
+    ports: [ "3000" ] # origin/backend  is open
+
+  waf:
+    image: owasp/modsecurity-crs:nginx
+    environment:
+      BACKEND: "http://juice:3000"
+    ports: [ "8080:8080" ] # added waf service with default configuration
+    depends_on: [ "juice" ]
