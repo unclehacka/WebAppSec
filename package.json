@@ -18,5 +18,8 @@
     "url": "https://github.com/unclehacka/WebAppSec/issues"
   },
   "homepage": "https://github.com/unclehacka/WebAppSec#readme",
-  "package-manager": "npm@10.9.0"
+  "package-manager": "npm@10.9.0",
+  "dependencies": {
+    "lodash": "4.17.20"
+  }
 }
